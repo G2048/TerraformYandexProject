@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@cdktf/provider-yandex": "^2.0.32"
+  }
+}
