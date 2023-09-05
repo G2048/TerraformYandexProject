@@ -1,20 +1,51 @@
-import os
-import yandexcloud
+#!/usr/bin/env python
 
-from yandex.cloud.resourcemanager.v1.cloud_service_pb2 import ListCloudsRequest
-from yandex.cloud.resourcemanager.v1.cloud_service_pb2_grpc import CloudServiceStub
-
-
-def handler(event, context):
-    cloud_service = yandexcloud.SDK().client(CloudServiceStub)
-    clouds = {}
-    for c in cloud_service.List(ListCloudsRequest()).clouds:
-        clouds[c.id] = c.name
-    return clouds
-
-    
-#print(f'{handler()}')
+from constructs import Construct
+from cdktf import App, TerraformStack
+from cdktf_cdktf_provider_docker.image import Image
+from cdktf_cdktf_provider_docker.container import Container
+from cdktf_cdktf_provider_docker.provider import DockerProvider
 
 
-TOKEN = os.environ.get('YC_TOKEN')
-sdk = yandexcloud.SDK(token=TOKEN)
+class MyStack(TerraformStack):
+    def __init__(self, scope: Construct, ns: str):
+        super().__init__(scope, ns)
+
+        DockerProvider(self, 'docker')
+
+        docker_image = Image(self, 'nginxImage',
+            name='nginx:latest',
+            keep_locally=False)
+
+        Container(self, 'nginxContainer',
+            name='tutorial',
+            image=docker_image.name,
+            ports=[{
+                'internal': 80,
+                'external': 8000
+            }])
+
+
+app = App()
+MyStack(app, "learn-cdktf-docker")
+
+app.synth()
+
+"""This code are equivalented:
+
+    resource "docker_image" "nginx" {
+    name         = "nginx:latest"
+    keep_locally = false
+    }
+
+    resource "docker_container" "nginx" {
+    image = docker_image.nginx.name
+    name  = "tutorial"
+    ports {
+        internal = 80
+        external = 8000
+    }
+    }
+
+    Run: cdktf deploy
+"""
